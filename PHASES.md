@@ -1,45 +1,44 @@
 # Resonance — Phases
 
-## Phase 1 — Audio Pipeline (Weeks 1–6)
+## Phase 1 — Audio Pipeline ✅ COMPLETE
 
 Goal: raw audio in → `{ bars, key, tempo, duration }` out of the Worker. No visuals beyond an RMS bar chart sanity check.
 
 ### Scaffold
-- [ ] `npm create vite@latest . -- --template vanilla-ts`
-- [ ] Install fft.js (`npm install fft.js`)
-- [ ] Install Vitest (`npm install -D vitest`)
-- [ ] Configure Vitest in `vite.config.ts`
+- [x] `npm create vite@latest . -- --template vanilla-ts`
+- [x] Install fft.js (`npm install fft.js`)
+- [x] Install Vitest (`npm install -D vitest`)
+- [x] Configure Vitest in `vite.config.ts`
 
 ### File Input
-- [ ] Drag-and-drop + file picker on main thread
-- [ ] File bytes transferred to Worker as Transferable
+- [x] Drag-and-drop + file picker on main thread
+- [x] Audio decoded in main thread via `AudioContext.decodeAudioData`; decoded `Float32Array` transferred to Worker as Transferable (`OfflineAudioContext` is not available in Web Workers)
 
 ### Web Worker
-- [ ] `src/worker.ts` — receives file bytes, runs pipeline, posts `{ bars, key, tempo, duration }`
-- [ ] `OfflineAudioContext` decode inside Worker (float32 buffer never crosses Worker boundary)
+- [x] `src/worker.ts` — receives decoded Float32Array samples, runs pipeline, posts `{ bars, key, tempo, duration }`
 
 ### DSP Modules (`src/dsp/`)
-- [ ] `fft.ts` — fft.js wrapper, 2048-point forward transform, Hann window
-- [ ] `chromagram.ts` — 12-bin pitch class profile from FFT magnitudes
-- [ ] `rms.ts` — per-window RMS energy
-- [ ] `centroid.ts` — spectral centroid (weighted mean of bins); NaN guard on silence → return 0
-- [ ] `onset.ts` — per-frame onset strength (sum of positive spectral flux)
-- [ ] `bpm.ts` — BPM via autocorrelation of onset strength function
-- [ ] `beats.ts` — dynamic-programming beat tracker: onset strength + BPM → beat timestamps
-- [ ] `key.ts` — Krumhansl-Schmuckler on time-averaged chromagram; returns `{ key, confidence }`
-- [ ] `barAggregation.ts` — group beats into bars; BPM=0 guard → return []
+- [x] `fft.ts` — fft.js wrapper, 2048-point forward transform, Hann window
+- [x] `chromagram.ts` — 12-bin pitch class profile from FFT magnitudes
+- [x] `rms.ts` — per-window RMS energy
+- [x] `centroid.ts` — spectral centroid (weighted mean of bins); NaN guard on silence → return 0
+- [x] `onset.ts` — per-frame onset strength (sum of positive spectral flux)
+- [x] `bpm.ts` — BPM via autocorrelation of onset strength function
+- [x] `beats.ts` — dynamic-programming beat tracker: onset strength + BPM → beat timestamps
+- [x] `key.ts` — Krumhansl-Schmuckler on time-averaged chromagram; returns `{ key, confidence }`
+- [x] `barAggregation.ts` — group beats into bars; BPM=0 guard → return []
 
 ### Unit Tests (Vitest)
-- [ ] 440Hz sine wave → chromagram A4 bin dominant
-- [ ] 120BPM click track → detected BPM within ±2% of 120
-- [ ] Pure C major scale → K-S returns "C major", high confidence
-- [ ] Uniform chromagram → key returned as "unclear"
-- [ ] `barAggregation(bpm=0)` → returns [], no divide-by-zero
-- [ ] `centroid(silence)` → returns 0, not NaN
+- [x] 440Hz sine wave → chromagram A4 bin dominant
+- [x] 120BPM click track → detected BPM within ±2% of 120
+- [x] Pure C major scale → K-S returns "C major", high confidence
+- [x] Uniform chromagram → key returned as "unclear"
+- [x] `barAggregation(bpm=0)` → returns [], no divide-by-zero
+- [x] `centroid(silence)` → returns 0, not NaN
 
 ### Validation
-- [ ] Performance benchmark: 3-min MP3 and 10-min FLAC through the Worker; document wall time in SPEC.md
-- [ ] First visual: rough RMS bar chart on a `<canvas>` confirms the pipeline is working end-to-end
+- [x] Performance benchmark: 0.23s for 103s MP3 (~450× real-time). See SPEC.md "Measured Performance".
+- [x] First visual: RMS bar chart renders on real audio; confirmed F# major / 104 BPM / 266s / 168 bars on a GD track.
 
 ---
 

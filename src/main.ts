@@ -36,9 +36,26 @@ function processFile(file: File) {
     </div>
   `
   const reader = new FileReader()
-  reader.onload = (e) => {
-    const buf = e.target!.result as ArrayBuffer
-    worker.postMessage(buf, [buf])
+  reader.onload = async (e) => {
+    const compressed = e.target!.result as ArrayBuffer
+    let audioBuffer: AudioBuffer
+    const ctx = new AudioContext()
+    try {
+      audioBuffer = await ctx.decodeAudioData(compressed)
+    } catch (err) {
+      app.innerHTML = `<div class="error">Decode failed: ${String(err)}</div><button id="retry">try another file</button>`
+      document.getElementById('retry')?.addEventListener('click', renderDropZone)
+      return
+    } finally {
+      ctx.close()
+    }
+    const samples = audioBuffer.getChannelData(0)
+    const payload = {
+      samples: samples.buffer as ArrayBuffer,
+      sampleRate: audioBuffer.sampleRate,
+      duration: audioBuffer.duration,
+    }
+    worker.postMessage(payload, [payload.samples])
   }
   reader.readAsArrayBuffer(file)
 }

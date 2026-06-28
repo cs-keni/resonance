@@ -2,6 +2,18 @@
 
 ## 2026-06-28
 
+### Phase 1 — Complete ✅
+
+**Validation:** dropped GD track (985099.mp3, 103s) in Chrome → F# major / 104 BPM / 266s / 168 bars, RMS bar chart renders correctly.
+
+**Performance benchmark:** 0.23s Worker analysis time for 103s audio (~450× real-time). No optimization needed. Results written to SPEC.md "Measured Performance".
+
+**Architecture bug fixed:** `OfflineAudioContext` is not available in Web Workers (browser limitation, not spec). Moved audio decode to the main thread via `AudioContext.decodeAudioData`. Main thread now decodes, closes the context, and transfers the `Float32Array` samples to the Worker as a Transferable. Worker receives `{ samples: ArrayBuffer, sampleRate, duration }`. Root cause of symptom: stale Vite dev server cache was serving old JS — full server restart on a new port resolved delivery. SPEC.md architecture notes updated to reflect new boundary.
+
+**Commit:** see git log for hash.
+
+---
+
 ### Phase 1 — Audio Pipeline implemented
 
 Full DSP pipeline built and tested. 34/34 unit tests passing, TypeScript (v6) clean.

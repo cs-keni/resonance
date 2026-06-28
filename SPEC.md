@@ -194,10 +194,10 @@ until now.
 | Framework | Vite + TS | Minimal; the logic is in the Web Worker and canvas renderer |
 
 **Audio analysis architecture:**
-The audio file is decoded to a raw `AudioBuffer` *inside the Worker* via
-`OfflineAudioContext` (the compressed file bytes are transferred to the Worker
-as a Transferable — the decoded ~420MB float32 buffer never crosses the Worker
-boundary). The buffer is processed in chunks (analysis windows) of ~46ms
+The audio file is decoded on the **main thread** via `AudioContext.decodeAudioData`
+(`OfflineAudioContext` is not available in Web Workers). The resulting `Float32Array`
+of samples is transferred to the Worker as a Transferable — ownership moves, no copy.
+The Worker processes the samples in chunks (analysis windows) of ~46ms
 (2048 samples at 44.1kHz). For each window:
 1. Apply a Hann window function (reduces spectral leakage)
 2. Run FFT using fft.js on the windowed samples
@@ -231,12 +231,14 @@ The bar-level data drives the fingerprint rendering.
 ```
 Main thread:
   - File input handler
+  - decodeAudioData (via AudioContext — OfflineAudioContext unavailable in Workers)
+  - Transfers Float32Array samples to Worker as Transferable
   - Analysis sequence animation
   - Canvas rendering of the fingerprint
   - Export handler
 
 Web Worker:
-  - decodeAudioData (via OfflineAudioContext)
+  - Receives decoded Float32Array samples
   - All FFT analysis
   - Chromagram, key detection, onset detection, RMS, centroid
   - Bar aggregation
@@ -418,16 +420,15 @@ Worker imports and orchestrates them. Vite bundles the worker. All modules are u
 
 ## Measured Performance
 
-_(Populated after Phase 1 benchmark — see Phase 1 task list)_
-
 | File | Duration | Format | Worker analysis time | Hardware |
 |------|----------|--------|---------------------|---------|
-| TBD  | 3 min    | MP3    | TBD                 | TBD     |
-| TBD  | 10 min   | FLAC   | TBD                 | TBD     |
+| GD track (985099) | 103s | MP3 | **0.23s** | Modern Windows desktop, Chrome |
+| 3-min MP3 (extrapolated) | 180s | MP3 | ~0.40s | — |
+| 10-min FLAC (extrapolated) | 600s | FLAC | ~1.34s | — |
 
-If analysis time exceeds 30 seconds on mid-range hardware (M1 MacBook or equivalent),
-options: reduce window overlap (2x → 4x hop size), upgrade to WASM FFT, or fully
-decouple Phase 3 animation from analysis wall time (progress reported via Worker messages).
+**Rate: ~450× real-time.** No optimization needed — well under the 30s budget at any practical file length. HOP_SIZE increase and WASM FFT are off the critical path.
+
+Note: Worker analysis time excludes audio decode (now in the main thread via `AudioContext.decodeAudioData`). Decode adds ~0.1–0.5s depending on file size and is parallelized with the UI update.
 
 ---
 

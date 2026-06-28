@@ -10,24 +10,17 @@ import { trackBeats } from './dsp/beats.ts'
 import { detectKey } from './dsp/key.ts'
 import { aggregateBars, type FrameData } from './dsp/barAggregation.ts'
 
-// All audio analysis runs here. The compressed file bytes arrive as a
-// Transferable so the main thread never owns the decoded AudioBuffer.
-self.onmessage = async (e: MessageEvent<ArrayBuffer>) => {
-  const fileBytes = e.data
+interface WorkerPayload {
+  samples: ArrayBuffer
+  sampleRate: number
+  duration: number
+}
 
-  // Decode inside the Worker — the ~420MB float32 buffer stays here
-  let audioBuffer: AudioBuffer
-  try {
-    const ctx = new OfflineAudioContext(1, 1, 44100)
-    audioBuffer = await ctx.decodeAudioData(fileBytes)
-  } catch (err) {
-    self.postMessage({ error: `Decode failed: ${String(err)}` })
-    return
-  }
-
-  const sampleRate = audioBuffer.sampleRate
-  const samples = audioBuffer.getChannelData(0) // mono: average if stereo later
-  const duration = audioBuffer.duration
+// Decoded Float32 samples arrive as a Transferable from the main thread.
+// OfflineAudioContext is not available in Workers; decoding happens in main.ts.
+self.onmessage = async (e: MessageEvent<WorkerPayload>) => {
+  const { samples: samplesBuffer, sampleRate, duration } = e.data
+  const samples = new Float32Array(samplesBuffer)
 
   const frames: FrameData[] = []
   const onsetSignal: number[] = []

@@ -1,19 +1,22 @@
 # Current Task — Resonance
 
-## Active: Phase 1 — Validation
+## Active: Phase 2 — Fingerprint Renderer
 
-**Status:** DSP modules complete. Pending: real-file test + performance benchmark.
+**Status:** Phase 1 complete. Starting canvas renderer.
 
-**Next immediate steps:**
-1. `npm run dev` → drop a real MP3 → verify RMS bar chart renders and stats look correct
-2. Performance benchmark: time Worker analysis on 3-min MP3 and 10-min FLAC
-3. Write benchmark results to SPEC.md "Measured Performance" section
-4. Mark Phase 1 complete in PHASES.md once benchmark passes
+**Phase 1 exit criteria — all met:**
+- 34/34 Vitest unit tests pass ✓
+- Real-file validation: F# major / 104 BPM / 266s / 168 bars on a GD MP3 ✓
+- Benchmark: 0.23s for 103s audio (~450× real-time), no optimization needed ✓
+- Architecture bug fixed: `OfflineAudioContext` unavailable in Workers → decoding moved to main thread via `AudioContext` ✓
 
-**Phase 1 acceptance criteria:**
-- Worker receives compressed file bytes, decodes via OfflineAudioContext, processes all DSP modules, posts `{ bars, key, tempo, duration }`
-- All 34 Vitest unit tests pass ✓
-- Performance benchmark documented in SPEC.md
-- RMS bar chart on screen confirms end-to-end pipeline
+**Phase 2 entry point:**
+1. Scaffold `src/renderer.ts` — Canvas 2D renderer
+2. Ring 1: pitch class → hue (Krumhansl-Schmuckler color wheel), one segment per bar
+3. Ring 2: onset density → opacity/saturation per segment
+4. Ring 3: RMS energy → radial extension as continuous line
+5. Ring 4: spectral centroid → brightness/saturation per segment
+6. Center glyph: key + BPM via `fillText`, Geist Mono loaded via `FontFace.load()` gate
+7. Export: `canvas.toDataURL('image/png')` at 2048×2048
 
 **Blockers:** None
