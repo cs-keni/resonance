@@ -2,9 +2,8 @@
 
 ## Current State
 
-**Phase:** 1 — Audio Pipeline (not yet started; scaffold pending)
+**Phase:** 1 — Audio Pipeline (implemented, tests passing; benchmark + RMS bar chart validation remaining)
 **Branch:** main
-**Last session:** 2026-06-27 — completed /plan-eng-review, all 12 findings resolved, SPEC.md finalized
 
 ## What Exists
 
@@ -12,36 +11,47 @@
 - `TODOS.md` — 3 deferred items (all post-Phase 2)
 - `CONTRAST-MAP.md` — visual differentiation from Chronicle, Flux, Kinotype
 - `PHASES.md` — phase/task breakdown with checkboxes
-- `docs/` — this scaffold (AI_CONTEXT, HANDOFF, ENGINEERING_LOG, CURRENT_TASK)
-- No application code yet
+- `vite.config.ts` — Vite + Vitest config
+- `src/dsp/` — all 9 DSP modules, fully implemented and unit-tested (34 tests)
+- `src/worker.ts` — orchestrates full pipeline
+- `src/main.ts` — drag-and-drop UI, RMS bar chart sanity check
+- `docs/` — this scaffold
+
+## Next Steps in Phase 1
+
+- [ ] Run the app locally (`npm run dev`), drop in a real audio file, verify the RMS bar chart appears
+- [ ] Performance benchmark: measure Worker analysis time on 3-min MP3 and 10-min FLAC, write results to SPEC.md
+- [ ] If benchmark shows >30s on mid-range hardware: evaluate reducing overlap (HOP_SIZE 1024→2048) or WASM FFT
 
 ## Architecture Ownership
 
-| Area | Owner notes |
-|------|-------------|
-| Worker + DSP pipeline | Not started |
-| Canvas renderer | Not started |
-| Analysis sequence animations | Not started (Phase 3; run /plan-design-review first) |
-| Export | Not started (Phase 4) |
+| Area | Status |
+|------|--------|
+| DSP pipeline (src/dsp/) | Phase 1 — DONE |
+| Worker (src/worker.ts) | Phase 1 — DONE |
+| Canvas renderer | Phase 2 — not started |
+| Analysis sequence animations | Phase 3 — not started (run /plan-design-review first) |
+| Export | Phase 4 — not started |
 
 ## Pending Before Phase 2
 
-- Phase 1 must be complete and passing Vitest unit tests
-- Performance benchmark documented in SPEC.md
-- RMS bar chart sanity check passes
+- Phase 1 benchmark complete and results written to SPEC.md
+- RMS bar chart sanity check passes on real audio files
 
 ## Pending Before Phase 3
 
-- Run `/plan-design-review` on the animation sequence (60-second build experience)
-- Phase 2 song quality tests must pass (≥3 chorus energy peaks, genre distinguishability)
+- Run `/plan-design-review` on the 60-second animation sequence
+- Phase 2 song quality tests pass
 
 ## Pending Before Phase 4
 
-- Write real-time companion mode architecture spec (see TODOS.md TODO-2)
+- Real-time companion mode architecture spec (TODOS.md TODO-2)
 
 ## Flags for the Next Agent
 
-- `barAggregation(bpm=0)` must return `[]` — divide-by-zero risk
-- `centroid(silence)` must return `0` — NaN risk from zero-energy denominator
-- The decoded AudioBuffer must never leave the Worker — only compressed bytes in (Transferable), bar struct out
-- Geist Mono must be loaded via `FontFace.load()` and awaited before any canvas render
+- `barAggregation(bpm=0)` returns `[]` — guard is in place
+- `centroid(silence)` returns `0` — guard is in place
+- The decoded AudioBuffer must never leave the Worker — critical invariant
+- Geist Mono must be loaded via `FontFace.load()` before any canvas render (Phase 2)
+- BPM can return the sub-harmonic on pathological signals; real music onset signals are irregular enough that this is rare in practice
+- TS6 requires explicit `Float64Array<ArrayBuffer>` in function return types — unparameterized `Float64Array` defaults to `<ArrayBufferLike>` which is not assignable to `<ArrayBuffer>`
