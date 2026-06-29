@@ -2,6 +2,31 @@
 
 ## 2026-06-28
 
+### Phase 3 — Design review complete (/plan-design-review)
+
+11 design decisions locked for the 60-second animation sequence. PHASES.md updated with full Phase 3 spec.
+
+**Key decisions:**
+- All 6 animation phases run within fixed `clamp(300px, 70vmin, 700px)` center zone (no viewport-spanning waveform)
+- Wall-clock timing via `performance.now()` — Worker pre-loads all data (~0.23s); 60-second build is intentional UX
+- RAF cancellation token required — new file drop must hard-cut in-progress animation loops
+- Waveform (0–5s): single Path2D stroke, 1px, `#dedede` at 0.35 opacity, ±30% height (oscilloscope, not EQ bars)
+- Frequency bands (5–15s): 8–12 stacked thin traces, same stroke style, 0.25–0.45 opacity
+- Chromagram (15–30s): 12×N column-by-column fill, HSL pitch-class colors, opacity = weight, no borders; 12×50 cap on ≤480px
+- Ring assembly (30–55s): clockwise linear draw rate, N / (phase_duration × 60fps) segments per frame
+- Glyph reveal (55–60s): `#0C0C10` overlay fades opacity 0.8→0 over 5s; rings stay in place
+- Stage labels: Geist Mono 0.7rem `#444` below canvas, one line, updates per phase
+- Inter-phase crossfades: 0.3s fade-out + 0.2s fade-in between each boundary
+- No skip button — 60-second build is the experience per SPEC.md
+
+**Implementation start order:** T1 (cancellation token) + T9 (wall-clock timer) first, then T2–T11 in phase order.
+
+**Design review score:** 2/10 → 8/10. GSTACK REVIEW REPORT appended to PHASES.md.
+
+**Commit:** see git log.
+
+---
+
 ### Phase 2 — Canvas renderer scaffolded
 
 Created `src/renderer.ts` — 4-ring Canvas 2D fingerprint renderer at 2048×2048 export resolution.

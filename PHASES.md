@@ -68,13 +68,77 @@ Goal: bar-level data → a static, printable circular fingerprint on canvas.
 
 Goal: the 60-second visual experience while the fingerprint builds.
 
-- [ ] Waveform draw animation (0s–5s): full-song waveform traces itself across the screen
-- [ ] Frequency decomposition animation (5s–15s): waveform splits into stacked frequency bands
-- [ ] Chromagram fill animation (15s–30s): 12×N grid fills color by color, ~10 rows/second
-- [ ] Ring 1 assembly animation (30s–45s): innermost ring draws clockwise, segment by segment
-- [ ] Rings 2–4 assembly animation (45s–55s): outer rings draw simultaneously, expanding outward
-- [ ] Glyph fade-in (55s–60s): analysis overlay fades, center glyph fades in
-- [ ] All animations driven by `requestAnimationFrame`, decoupled from Worker analysis timeline
+### Design Decisions (locked in /plan-design-review, 2026-06-28)
+
+**Layout & timing:**
+- All phases animate within the fixed center zone: `clamp(300px, 70vmin, 700px)` canvas, centered in viewport. No viewport-spanning waveform.
+- Animation timing: wall-clock driven (`performance.now()`). Worker returns all data in ~0.23s (pre-loaded). The 60-second build is a deliberate design choice, not an analysis constraint.
+- No "analyzing structure..." intermediate state. Animation begins as soon as the Worker returns (~0.23s after drop). File name shows above canvas zone during the build.
+- Stage label: one Geist Mono line below canvas (`font-size: 0.7rem; letter-spacing: 0.12em; color: #444`), updates per phase:
+  `reading waveform` → `isolating harmonics` → `mapping pitch field` → `assembling ring 1` → `composing fingerprint` → fades out at 55s.
+
+**Interrupt & error states:**
+- User drops a new file mid-animation: hard cut. Cancel all active RAF loops via a cancellation token (AbortController or cancel flag). Replace with new file's sequence.
+- Worker error during animation: cancel RAF loops, fade canvas to `#0C0C10` over 0.3s, show existing error UI.
+
+**Inter-phase transitions:**
+- Each phase fades its content to `#0C0C10` over 0.3s at phase end, then next phase fades in over 0.2s. 0.5s crossfade per boundary.
+- Phase boundaries: 0s, 5s, 15s, 30s, 45s, 55s, 60s.
+
+**Phase visual specs:**
+
+*Phase 1 — Waveform (0s–5s):*
+- Single Path2D stroke across the canvas zone, centered vertically.
+- 1px line weight. Color: `#dedede` at opacity 0.35.
+- Amplitude: ±30% of canvas height. Draws left-to-right over 5s.
+- Scientific/oscilloscope aesthetic — not bouncing bars.
+
+*Phase 2 — Frequency decomposition (5s–15s):*
+- 8–12 thin Path2D stroke traces stacked vertically within canvas zone, tight gaps between them.
+- Same stroke style as Phase 1 (`#dedede`, 1px). Opacity per band: 0.25–0.45 (lower bands slightly more prominent).
+- Traces are static amplitude profiles per frequency band — not animated bouncing.
+- Appears as stacked oscilloscope lines, not an EQ visualizer.
+
+*Phase 3 — Chromagram fill (15s–30s):*
+- 12×N grid (12 pitch classes × N bars). Fills column by column, left to right (time axis).
+- Each cell: `hsl(${pitchHue(pc)}, sat%, light%)` at opacity proportional to chromagram weight (0 weight ≈ transparent).
+- No grid borders or outlines. Cells are color patches on the dark background.
+- Mobile (≤480px): cap at 12×50 columns (time-compressed view).
+
+*Phase 4 — Ring 1 assembly (30s–45s):*
+- Draws clockwise from 12 o'clock, one segment per RAF frame.
+- Draw rate: N segments / (15s × 60fps) segments per frame. Linear — no per-segment easing.
+- Uses the same `hsl(${pitchHue(pc)}, 78%, 54%)` fill as the final renderer.
+
+*Phase 5 — Rings 2–4 assembly (45s–55s):*
+- All three outer rings draw simultaneously, each at their own linear rate (N segments / 10s × 60fps).
+- Ring 2, 3, 4 visual specs identical to final renderer (`renderer.ts`).
+
+*Phase 6 — Glyph reveal (55s–60s):*
+- Rings stay visible (no re-render). Center zone had an `#0C0C10` overlay at opacity 0.8 covering the glyph area.
+- Overlay fades from opacity 0.8 → 0 over 5s, revealing the key+BPM Geist Mono glyph.
+- No replay of `appear` animation — rings are already in place.
+- Stage label fades out as glyph fades in.
+
+**Segment reveal easing:** Linear draw rate for all ring assembly phases.
+
+**Mobile:** Canvas is `clamp(300px, 70vmin, 700px)`. At ≤480px, chromagram caps at 12×50 columns. All other phases scale naturally with the canvas size.
+
+**Skip:** No skip button. The 60-second build is the experience per SPEC.md.
+
+### Implementation Tasks
+
+- [ ] Add cancellation token (cancel flag or AbortController) to animation state; wire to `processFile` so new drops hard-cut RAF loops
+- [ ] Waveform draw (0s–5s): Path2D stroke, 1px, `#dedede` at 0.35 opacity, ±30% height, left-to-right over 5s
+- [ ] Frequency decomposition (5s–15s): 8–12 stacked thin amplitude traces, same stroke style, 0.25–0.45 opacity per band
+- [ ] Chromagram fill (15s–30s): 12×N column-by-column, HSL pitch-class colors, opacity = chromagram weight, no borders; 12×50 cap on ≤480px
+- [ ] Ring 1 assembly (30s–45s): clockwise segment draw, linear rate, N/(15s×60fps) segments/frame
+- [ ] Rings 2–4 assembly (45s–55s): simultaneous draw, linear rate per ring, N/(10s×60fps) segments/frame
+- [ ] Glyph reveal (55s–60s): fade `#0C0C10` overlay opacity 0.8→0 over 5s; stage label crossfades out
+- [ ] Stage label: Geist Mono below canvas, updates per phase, fades out at 55s
+- [ ] Inter-phase crossfades: 0.3s fade-out + 0.2s fade-in between each phase pair
+- [ ] Error path: cancel RAF loops, fade canvas 0.3s, show existing error UI
+- [ ] Wall-clock timer via `performance.now()` drives all phase timing
 - [ ] Worker posts progress messages so animations stay in sync without blocking on analysis
 
 ---
@@ -102,3 +166,19 @@ Goal: ship-quality product.
 - [ ] Shareable link (URL hash encodes bar-level features, not audio)
 - [ ] Ensemble mode (full album as concentric sub-rings)
 - [ ] AI genre label (YAMNet / MusiCNN via TensorFlow.js)
+
+---
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
+| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (PLAN) | See docs/HANDOFF.md — Phase 2 architecture locked |
+| Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAR (FULL) | score: 2/10 → 8/10, 11 decisions made |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
+
+**VERDICT:** DESIGN CLEARED — 11 design decisions locked. Eng Review previously passed (Phase 2 architecture). Phase 3 implementation ready.
+
+NO UNRESOLVED DECISIONS
