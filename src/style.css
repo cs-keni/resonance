@@ -95,6 +95,14 @@ canvas.fingerprint {
   to   { opacity: 1; transform: scale(1); }
 }
 
+.stage-label {
+  font-size: 0.7rem;
+  color: #444;
+  letter-spacing: 0.12em;
+  min-height: 1em;
+  transition: opacity 0.3s ease;
+}
+
 .stats {
   font-size: 0.75rem;
   color: #666;

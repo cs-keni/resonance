@@ -1,5 +1,35 @@
 # Engineering Log — Resonance
 
+## 2026-06-29
+
+### Phase 3 — Animation sequence implemented (`src/main.ts`, `src/style.css`)
+
+Full 60-second animated build sequence implemented. All 11 tasks complete.
+
+**Architecture:**
+- `stopAnimation()` + `rafCancel` flag provide RAF cancellation; new file drop hard-cuts any running animation
+- `runPhase3(bars, key, tempo, duration)` builds canvas + stage label DOM, starts the `tick()` RAF loop
+- Wall-clock timing via `performance.now()` — phase boundaries at 0/5/15/30/45/55/60s
+- Crossfade overlay (0.3s fade-out at phase end, 0.2s fade-in at start) via canvas `rgba(12,12,16,α)` rect
+- Phase 5 (glyph reveal) has its own reveal mechanism — crossfade overlay suppressed there
+
+**Phase implementations:**
+- Phase 0 (0–5s): single waveform stroke, `bars[i].rms` mapped to ±30% height, draws left-to-right
+- Phase 1 (5–15s): 8 stacked traces, each drawing energy derived from `pitchClassProfile` grouped by pitch-class band
+- Phase 2 (15–30s): 12×N chromagram grid, column-by-column; cell opacity = normalized `pitchClassProfile[pc]`; 12×50 cap on ≤480px
+- Phase 3 (30–45s): Ring 1 assembles clockwise, linear rate
+- Phase 4 (45–55s): Rings 2–4 draw simultaneously (same loop, same linear rate)
+- Phase 5 (55–60s): rings fully assembled (all progress clamped ≥1); dark center overlay fades 0.8→0, glyph fades in; stage label opacity tracks reveal
+- After 60s: `drawFingerprint()` from renderer.ts redraws the canonical output (applies depth gradients), then stats + buttons appear
+
+**Key finding:** `BarData.pitchClassProfile: number[]` (12-bin chromagram per bar) already existed — no Worker or DSP changes needed.
+
+**CSS added:** `.stage-label` — Geist Mono 0.7rem `#444`, 0.3s opacity transition.
+
+**Commit:** see git log.
+
+---
+
 ## 2026-06-28
 
 ### Phase 3 — Design review complete (/plan-design-review)

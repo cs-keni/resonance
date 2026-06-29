@@ -128,18 +128,17 @@ Goal: the 60-second visual experience while the fingerprint builds.
 
 ### Implementation Tasks
 
-- [ ] Add cancellation token (cancel flag or AbortController) to animation state; wire to `processFile` so new drops hard-cut RAF loops
-- [ ] Waveform draw (0s–5s): Path2D stroke, 1px, `#dedede` at 0.35 opacity, ±30% height, left-to-right over 5s
-- [ ] Frequency decomposition (5s–15s): 8–12 stacked thin amplitude traces, same stroke style, 0.25–0.45 opacity per band
-- [ ] Chromagram fill (15s–30s): 12×N column-by-column, HSL pitch-class colors, opacity = chromagram weight, no borders; 12×50 cap on ≤480px
-- [ ] Ring 1 assembly (30s–45s): clockwise segment draw, linear rate, N/(15s×60fps) segments/frame
-- [ ] Rings 2–4 assembly (45s–55s): simultaneous draw, linear rate per ring, N/(10s×60fps) segments/frame
-- [ ] Glyph reveal (55s–60s): fade `#0C0C10` overlay opacity 0.8→0 over 5s; stage label crossfades out
-- [ ] Stage label: Geist Mono below canvas, updates per phase, fades out at 55s
-- [ ] Inter-phase crossfades: 0.3s fade-out + 0.2s fade-in between each phase pair
-- [ ] Error path: cancel RAF loops, fade canvas 0.3s, show existing error UI
-- [ ] Wall-clock timer via `performance.now()` drives all phase timing
-- [ ] Worker posts progress messages so animations stay in sync without blocking on analysis
+- [x] Add cancellation token (cancel flag or AbortController) to animation state; wire to `processFile` so new drops hard-cut RAF loops
+- [x] Waveform draw (0s–5s): Path2D stroke, 1px, `#dedede` at 0.35 opacity, ±30% height, left-to-right over 5s
+- [x] Frequency decomposition (5s–15s): 8–12 stacked thin amplitude traces, same stroke style, 0.25–0.45 opacity per band
+- [x] Chromagram fill (15s–30s): 12×N column-by-column, HSL pitch-class colors, opacity = chromagram weight, no borders; 12×50 cap on ≤480px
+- [x] Ring 1 assembly (30s–45s): clockwise segment draw, linear rate
+- [x] Rings 2–4 assembly (45s–55s): simultaneous draw, linear rate per ring
+- [x] Glyph reveal (55s–60s): fade `#0C0C10` overlay opacity 0.8→0 over 5s; stage label crossfades out
+- [x] Stage label: Geist Mono below canvas, updates per phase, fades out at 55s
+- [x] Inter-phase crossfades: 0.3s fade-out + 0.2s fade-in between each phase pair
+- [x] Error path: cancel RAF loops, show existing error UI
+- [x] Wall-clock timer via `performance.now()` drives all phase timing
 
 ---
 
