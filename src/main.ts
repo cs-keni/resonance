@@ -1,5 +1,6 @@
 import './style.css'
 import type { BarData } from './dsp/barAggregation.ts'
+import { drawFingerprint } from './renderer.ts'
 
 const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -60,22 +61,7 @@ function processFile(file: File) {
   reader.readAsArrayBuffer(file)
 }
 
-function drawRmsChart(bars: BarData[], canvas: HTMLCanvasElement) {
-  const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = '#0C0C10'
-  ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-  const maxRms = Math.max(...bars.map((b) => b.rms), 0.001)
-  const bw = canvas.width / bars.length
-
-  bars.forEach((bar, i) => {
-    const h = (bar.rms / maxRms) * canvas.height
-    ctx.fillStyle = '#3a6fff'
-    ctx.fillRect(i * bw, canvas.height - h, Math.max(bw - 1, 1), h)
-  })
-}
-
-worker.onmessage = (e: MessageEvent) => {
+worker.onmessage = async (e: MessageEvent) => {
   const { bars, key, tempo, duration, error } = e.data as {
     bars: BarData[]
     key: string
@@ -91,22 +77,39 @@ worker.onmessage = (e: MessageEvent) => {
   }
 
   const canvas = document.createElement('canvas')
-  canvas.width = 800
-  canvas.height = 160
-  drawRmsChart(bars, canvas)
+  canvas.classList.add('fingerprint')
+  await drawFingerprint(canvas, bars, key, tempo)
 
-  app.innerHTML = `
-    <div class="result">
-      <div class="stats">${key} &nbsp;/&nbsp; ${tempo} bpm &nbsp;/&nbsp; ${Math.round(duration)}s &nbsp;/&nbsp; ${bars.length} bars</div>
-    </div>
-  `
-  app.querySelector('.result')!.prepend(canvas)
+  const stats = document.createElement('div')
+  stats.className = 'stats'
+  stats.textContent = `${key} / ${tempo} bpm / ${Math.round(duration)}s / ${bars.length} bars`
 
-  const again = document.createElement('button')
-  again.id = 'retry'
-  again.textContent = 'drop another'
-  app.querySelector('.result')!.appendChild(again)
-  again.addEventListener('click', renderDropZone)
+  const dlBtn = document.createElement('button')
+  dlBtn.textContent = 'save png'
+  dlBtn.addEventListener('click', () => {
+    const a = document.createElement('a')
+    a.href = canvas.toDataURL('image/png')
+    a.download = 'resonance.png'
+    a.click()
+  })
+
+  const retryBtn = document.createElement('button')
+  retryBtn.textContent = 'drop another'
+  retryBtn.addEventListener('click', renderDropZone)
+
+  const actions = document.createElement('div')
+  actions.className = 'actions'
+  actions.appendChild(dlBtn)
+  actions.appendChild(retryBtn)
+
+  const result = document.createElement('div')
+  result.className = 'result'
+  result.appendChild(canvas)
+  result.appendChild(stats)
+  result.appendChild(actions)
+
+  app.innerHTML = ''
+  app.appendChild(result)
 }
 
 worker.onerror = (e) => {

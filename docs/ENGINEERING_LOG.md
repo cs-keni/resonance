@@ -2,6 +2,30 @@
 
 ## 2026-06-28
 
+### Phase 2 — Canvas renderer scaffolded
+
+Created `src/renderer.ts` — 4-ring Canvas 2D fingerprint renderer at 2048×2048 export resolution.
+
+**Ring layout:**
+- Ring 1 (r 200–420): pitch class hue — chromatic color wheel (pc × 30°)
+- Ring 2 (r 444–560): onset density → saturation (0–88%); hue shared with Ring 1
+- Ring 3 (r 584–724+): RMS → radial extension; no inter-segment gap for continuous profile; lightness 30–82%
+- Ring 4 (r 748–870): spectral centroid → lightness (20–85%); saturation 90%
+- Center glyph: key (bold 56px) + BPM (44px) in Geist Mono, gated on `document.fonts.load()`
+- Depth overlay: per-ring `createRadialGradient` under `clip('evenodd')` — darker inner, slight sheen at outer edge
+
+**main.ts changes:** removed `drawRmsChart`; `worker.onmessage` is now async, calls `drawFingerprint`, adds "save png" download button. Canvas display scaled via CSS (`clamp(300px, 70vmin, 700px)`).
+
+**style.css:** fingerprint canvas display size, `appear` animation (scale 0.96→1 + fade), `.actions` flex row for buttons.
+
+**index.html:** added Geist Mono from Google Fonts (preconnect + stylesheet link).
+
+**docs/AI_CONTEXT.md:** corrected stale architecture note — audio decode is on main thread, not in Worker.
+
+**Commit:** see git log.
+
+---
+
 ### Phase 1 — Complete ✅
 
 **Validation:** dropped GD track (985099.mp3, 103s) in Chrome → F# major / 104 BPM / 266s / 168 bars, RMS bar chart renders correctly.

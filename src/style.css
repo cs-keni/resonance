@@ -80,17 +80,30 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 1rem;
+  padding: 2rem 0;
 }
 
-canvas {
-  border: 1px solid #1a1a22;
-  display: block;
+canvas.fingerprint {
+  width: clamp(300px, 70vmin, 700px);
+  height: clamp(300px, 70vmin, 700px);
+  border-radius: 2px;
+  animation: appear 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes appear {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
 .stats {
   font-size: 0.75rem;
   color: #666;
   letter-spacing: 0.06em;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
 }
 
 button {

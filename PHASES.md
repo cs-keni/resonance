@@ -46,14 +46,14 @@ Goal: raw audio in → `{ bars, key, tempo, duration }` out of the Worker. No vi
 
 Goal: bar-level data → a static, printable circular fingerprint on canvas.
 
-- [ ] Canvas renderer scaffolded (`src/renderer.ts`)
-- [ ] Ring 1: pitch class → hue mapping (K-S color wheel), one segment per bar
-- [ ] Ring 2: onset density → opacity/saturation per segment (fixed inner/outer radius)
-- [ ] Ring 3: RMS energy → radial extension as a continuous line
-- [ ] Ring 4: spectral centroid → brightness/saturation per segment
-- [ ] Center glyph: key + BPM via `fillText` in Geist Mono (FontFace.load() gate before render)
-- [ ] Near-black background (#0C0C10), inter-ring gaps, subtle radial gradient per segment
-- [ ] Lightweight export: `canvas.toDataURL('image/png')` at 2048×2048 (no caption yet)
+- [x] Canvas renderer scaffolded (`src/renderer.ts`)
+- [x] Ring 1: pitch class → hue mapping (chromatic color wheel, pc×30°), one segment per bar
+- [x] Ring 2: onset density → saturation per segment (fixed inner/outer radius)
+- [x] Ring 3: RMS energy → radial extension (no inter-segment gap, continuous profile)
+- [x] Ring 4: spectral centroid → brightness/saturation per segment
+- [x] Center glyph: key + BPM via `fillText` in Geist Mono (document.fonts.load() gate before render)
+- [x] Near-black background (#0C0C10), inter-ring gaps, subtle radial gradient per segment
+- [x] Lightweight export: `canvas.toDataURL('image/png')` at 2048×2048 (no caption yet)
 - [ ] Song quality test — pass criteria:
   - [ ] 4-chorus pop song → ≥3 visible energy peaks in Ring 3
   - [ ] Two songs a perfect fifth apart → visibly different dominant hues in Ring 1

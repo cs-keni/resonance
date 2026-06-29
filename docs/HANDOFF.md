@@ -2,7 +2,7 @@
 
 ## Current State
 
-**Phase:** 2 — Fingerprint Renderer (not started)
+**Phase:** 2 — Fingerprint Renderer (in progress)
 **Branch:** main
 
 ## What Exists
@@ -10,11 +10,12 @@
 - `SPEC.md` — full architecture + phase breakdown, ENG CLEARED, benchmark populated
 - `TODOS.md` — 3 deferred items (all post-Phase 2)
 - `CONTRAST-MAP.md` — visual differentiation from Chronicle, Flux, Kinotype
-- `PHASES.md` — Phase 1 complete ✅, Phase 2–5 checkboxes ready
+- `PHASES.md` — Phase 1 complete ✅, Phase 2 in progress
 - `vite.config.ts` — Vite + Vitest config
 - `src/dsp/` — all 9 DSP modules, fully implemented and unit-tested (34 tests)
 - `src/worker.ts` — orchestrates full DSP pipeline; receives decoded Float32Array from main thread
-- `src/main.ts` — drag-and-drop UI, AudioContext decode, RMS bar chart sanity check
+- `src/main.ts` — drag-and-drop UI, AudioContext decode, calls `drawFingerprint`, save PNG button
+- `src/renderer.ts` — Canvas 2D fingerprint renderer (4 rings + center glyph, 2048×2048 export)
 - `docs/` — this scaffold
 
 ## Architecture Ownership
@@ -23,9 +24,9 @@
 |------|--------|
 | DSP pipeline (src/dsp/) | Phase 1 — DONE |
 | Worker (src/worker.ts) | Phase 1 — DONE |
-| Canvas renderer | Phase 2 — not started |
+| Canvas renderer (src/renderer.ts) | Phase 2 — scaffolded, rings implemented |
 | Analysis sequence animations | Phase 3 — not started (run /plan-design-review first) |
-| Export | Phase 4 — not started |
+| Export | Phase 4 — not started (canvas.toDataURL wired in Phase 2 main.ts) |
 
 ## Pending Before Phase 3
 

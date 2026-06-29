@@ -2,21 +2,23 @@
 
 ## Active: Phase 2 — Fingerprint Renderer
 
-**Status:** Phase 1 complete. Starting canvas renderer.
+**Status:** Canvas renderer scaffolded and rings implemented. Testing in progress.
 
-**Phase 1 exit criteria — all met:**
-- 34/34 Vitest unit tests pass ✓
-- Real-file validation: F# major / 104 BPM / 266s / 168 bars on a GD MP3 ✓
-- Benchmark: 0.23s for 103s audio (~450× real-time), no optimization needed ✓
-- Architecture bug fixed: `OfflineAudioContext` unavailable in Workers → decoding moved to main thread via `AudioContext` ✓
+**Phase 2 progress:**
+- [x] Scaffold `src/renderer.ts` — Canvas 2D renderer
+- [x] Ring 1: pitch class → hue (chromatic color wheel, pc×30°), one segment per bar
+- [x] Ring 2: onset density → saturation per segment
+- [x] Ring 3: RMS energy → radial extension (no inter-segment gap, continuous profile)
+- [x] Ring 4: spectral centroid → brightness per segment
+- [x] Center glyph: key + BPM via `fillText`, Geist Mono loaded via `document.fonts.load()` gate
+- [x] Export: `canvas.toDataURL('image/png')` wired to "save png" button
+- [x] Subtle radial depth gradient overlay on each ring
+- [x] Fingerprint fade-in animation on result view
 
-**Phase 2 entry point:**
-1. Scaffold `src/renderer.ts` — Canvas 2D renderer
-2. Ring 1: pitch class → hue (Krumhansl-Schmuckler color wheel), one segment per bar
-3. Ring 2: onset density → opacity/saturation per segment
-4. Ring 3: RMS energy → radial extension as continuous line
-5. Ring 4: spectral centroid → brightness/saturation per segment
-6. Center glyph: key + BPM via `fillText`, Geist Mono loaded via `FontFace.load()` gate
-7. Export: `canvas.toDataURL('image/png')` at 2048×2048
+**Remaining (Phase 2 completion criteria):**
+- [ ] Song quality test: 4-chorus pop → ≥3 visible Ring 3 energy peaks
+- [ ] Two songs a perfect fifth apart → visibly different dominant hues in Ring 1
+- [ ] Classical piano vs. metal → distinguishable at a glance
+- [ ] 10+ diverse songs tested
 
 **Blockers:** None
