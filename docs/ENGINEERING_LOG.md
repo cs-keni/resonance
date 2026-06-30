@@ -2,6 +2,14 @@
 
 ## 2026-06-30
 
+### T12 — Per-segment angular highlight (`src/renderer.ts`)
+
+Added `segmentHighlight()`: 9% white overlay on the center 44% of each segment's angular span, applied after the base fill and before `ringDepth()` on Rings 1, 2, and 4. Ring 3 excluded (continuous RMS profile, no gaps). Creates subtle convex-tile effect most visible on songs with <80 bars. Evaluated in browser — kept.
+
+**Phase 4 complete. ✅**
+
+---
+
 ### Animation pass — 60s build, idle life, micro-interactions (`src/main.ts`, `src/style.css`)
 
 **During the 60s build:**

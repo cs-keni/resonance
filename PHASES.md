@@ -171,7 +171,7 @@ Goal: ship-quality product.
 - [x] **T9 (P2)** — `src/main.ts:382` — Update save button to call `exportFingerprint()` instead of display canvas
 - [x] **T10 (P2)** — `src/main.ts` — Show song name (no extension) in stats DOM line
 - [x] **T11 (P2)** — `src/main.ts` — Playback tracker: play button, re-decode, overlay canvas, RAF loop, `onended` cleanup
-- [ ] **T12 (P3)** — `src/renderer.ts` — Evaluate per-segment gradient vs existing `ringDepth()` per-ring; implement if visually distinct
+- [x] **T12 (P3)** — `src/renderer.ts` — `segmentHighlight()`: 9% white overlay on center 44% of each segment's angular span; applied to Rings 1, 2, 4 (Ring 3 excluded — continuous profile)
 - [x] **T13 (P3)** — Manual + `TODOS.md` — Color wheel evaluation; fifth-apart delta corrected to ~210° in TODOS.md
 - [x] **T14 (P3)** — `TODOS.md` — Add file size/duration policy TODO; rename TODO-3 to "collision smoke test"
 - [x] **T15 (P3)** — `docs/` + `PHASES.md` — Updated HANDOFF.md, CURRENT_TASK.md, AI_CONTEXT.md

@@ -14,6 +14,28 @@ const R3_EXT  = 140   // max radial extension beyond R3_BASE
 const R4_IN   = 748   // Ring 4: spectral centroid → brightness
 const R4_OUT  = 870
 
+// Angular center highlight: white overlay on the central portion of each segment,
+// making each bar read as a convex arc tile. Most visible on wide segments (< 80 bars).
+function segmentHighlight(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number,
+  rIn: number, rOut: number,
+  n: number, start: number, dTheta: number,
+): void {
+  const margin = dTheta * 0.28   // skip outer 28% on each angular edge
+  ctx.save()
+  ctx.globalAlpha = 0.09
+  ctx.fillStyle = '#fff'
+  for (let i = 0; i < n; i++) {
+    const a0 = start + i * dTheta + margin
+    const a1 = start + (i + 1) * dTheta - margin
+    if (a1 <= a0) continue
+    annularSector(ctx, cx, cy, rIn, rOut, a0, a1)
+    ctx.fill()
+  }
+  ctx.restore()
+}
+
 // Subtle depth: darker inner edge, slight sheen at outer edge
 function ringDepth(
   ctx: CanvasRenderingContext2D,
@@ -76,6 +98,7 @@ export async function drawFingerprint(
     ctx.fillStyle = `hsl(${pitchHue(bar.pitchClass)}, 78%, 54%)`
     ctx.fill()
   }
+  segmentHighlight(ctx, cx, cy, R1_IN, R1_OUT, n, start, dTheta)
   ringDepth(ctx, cx, cy, R1_IN, R1_OUT)
 
   // ── Ring 2: onset density → saturation ─────────────────────────────────────
@@ -88,6 +111,7 @@ export async function drawFingerprint(
     ctx.fillStyle = `hsl(${pitchHue(bar.pitchClass)}, ${sat}%, 56%)`
     ctx.fill()
   }
+  segmentHighlight(ctx, cx, cy, R2_IN, R2_OUT, n, start, dTheta)
   ringDepth(ctx, cx, cy, R2_IN, R2_OUT)
 
   // ── Ring 3: RMS → radial extension (no gap = continuous profile) ────────────
@@ -113,6 +137,7 @@ export async function drawFingerprint(
     ctx.fillStyle = `hsl(${pitchHue(bar.pitchClass)}, 90%, ${light}%)`
     ctx.fill()
   }
+  segmentHighlight(ctx, cx, cy, R4_IN, R4_OUT, n, start, dTheta)
   ringDepth(ctx, cx, cy, R4_IN, R4_OUT)
 
   // ── Center glyph ────────────────────────────────────────────────────────────
