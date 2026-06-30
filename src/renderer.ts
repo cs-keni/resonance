@@ -1,4 +1,5 @@
 import type { BarData } from './dsp/barAggregation.ts'
+import { pitchHue, annularSector, stripExtension } from './utils.ts'
 
 const EXPORT_SIZE = 2048
 const BG = '#0C0C10'
@@ -12,24 +13,6 @@ const R3_BASE = 584   // Ring 3: RMS → radial extension (no inter-segment gap)
 const R3_EXT  = 140   // max radial extension beyond R3_BASE
 const R4_IN   = 748   // Ring 4: spectral centroid → brightness
 const R4_OUT  = 870
-
-// Chromatic color wheel: each semitone = 30°
-function pitchHue(pc: number): number {
-  return (pc * 30) % 360
-}
-
-// Annular sector: outer arc clockwise → inner arc counter-clockwise → close
-function annularSector(
-  ctx: CanvasRenderingContext2D,
-  cx: number, cy: number,
-  rIn: number, rOut: number,
-  a0: number, a1: number,
-): void {
-  ctx.beginPath()
-  ctx.arc(cx, cy, rOut, a0, a1)
-  ctx.arc(cx, cy, rIn, a1, a0, true)
-  ctx.closePath()
-}
 
 // Subtle depth: darker inner edge, slight sheen at outer edge
 function ringDepth(
@@ -143,4 +126,49 @@ export async function drawFingerprint(
   ctx.font      = "44px 'Geist Mono', 'Courier New', monospace"
   ctx.fillStyle = '#555'
   ctx.fillText(`${tempo} bpm`, cx, cy + 42)
+}
+
+const CAPTION_H = 212   // extra height below the 2048×2048 fingerprint
+
+export async function exportFingerprint(
+  bars: BarData[],
+  key: string,
+  tempo: number,
+  duration: number,
+  filename: string,
+): Promise<string> {
+  const offscreen = document.createElement('canvas')
+  offscreen.width  = EXPORT_SIZE
+  offscreen.height = EXPORT_SIZE + CAPTION_H
+
+  const ctx = offscreen.getContext('2d')!
+  ctx.fillStyle = BG
+  ctx.fillRect(0, 0, offscreen.width, offscreen.height)
+
+  // Render fingerprint into a temporary 2048×2048 canvas, then copy pixels
+  const tmp = document.createElement('canvas')
+  await drawFingerprint(tmp, bars, key, tempo)
+  ctx.drawImage(tmp, 0, 0)
+
+  // Caption — song title
+  await document.fonts.load("bold 36px 'Geist Mono'").catch(() => undefined)
+
+  const title = stripExtension(filename, 60)
+  const captionY = EXPORT_SIZE + 72
+
+  ctx.textAlign    = 'center'
+  ctx.textBaseline = 'alphabetic'
+  ctx.font      = "bold 36px 'Geist Mono', 'Courier New', monospace"
+  ctx.fillStyle = '#dedede'
+  ctx.fillText(title, EXPORT_SIZE / 2, captionY)
+
+  ctx.font      = "28px 'Geist Mono', 'Courier New', monospace"
+  ctx.fillStyle = '#555'
+  ctx.fillText(
+    `${key}  ·  ${tempo} bpm  ·  ${Math.round(duration)}s`,
+    EXPORT_SIZE / 2,
+    captionY + 48,
+  )
+
+  return offscreen.toDataURL('image/png')
 }

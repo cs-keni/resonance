@@ -146,15 +146,37 @@ Goal: the 60-second visual experience while the fingerprint builds.
 
 Goal: ship-quality product.
 
-- [ ] Full export: 2048×2048 PNG with song name, key, tempo caption below image
-- [ ] Segment radial gradient (subtle, adds depth to rings)
-- [ ] Color wheel tuning: refine pitch-class-to-hue mapping based on diverse song evaluation
-- [ ] Error handling: corrupted file, unsupported format, silent file, short file (<30s)
-- [ ] Real-time companion: white radial line moves clockwise as song plays (architecture spec in TODOS.md first)
-- [ ] Song name + duration displayed below fingerprint
-- [ ] TODO-3: uniqueness guarantee validation (same-genre song pairs)
+### Architecture Decisions (locked in /plan-eng-review, 2026-06-29)
 
-> **Before Phase 4:** write real-time companion mode architecture spec (see TODOS.md TODO-2).
+- Export canvas: `exportFingerprint()` creates a separate 2048×2260 offscreen canvas for download. Display canvas stays 2048×2048 unchanged.
+- Caption spec: song name (extension stripped, max 60 chars + ellipsis) at 36px Geist Mono `#dedede`; key / tempo / duration at 28px `#555`; centered; 106px margin below Ring 4.
+- Companion mode: playback tracker only (white radial line, no streaming FFT). Re-decode from stored `currentFile: File` on play button click. Overlay transparent canvas stacked above fingerprint via `position: absolute`. TODO-2 real-time streaming deferred to Phase 5.
+- Short file detection: main thread after `AudioContext.decodeAudioData`, before Worker postMessage. `if (audioBuffer.duration < 30) → showError(...)`.
+- Job ID stamp: `let currentJobId = 0`; increment on each `processFile()`; guard stale Worker responses with `if (jobId !== currentJobId) return`.
+- Cancellation: `stopAnimation()` extended to also call `currentAudioSource?.stop()`. Overlay RAF loop reuses same `cancelled` flag pattern.
+- DRY: `pitchHue()` and `annularSector()` extracted to `src/utils.ts`; imported by `main.ts`, `renderer.ts`, and `exportFingerprint()`.
+- Tests: pure helpers extracted (`validateAudioDuration`, `playbackAngle`, `buildExportCaption`) with Vitest unit tests. DOM-coupled paths rely on browser testing.
+- Color wheel: chromatic (`pc × 30°`) is correct. Songs a perfect fifth apart (7 semitones) differ by ~210° on the chromatic wheel — large and visually obvious. TODOS.md corrected.
+
+### Implementation Tasks
+
+- [ ] **T1 (P1)** — `src/utils.ts` — Extract `pitchHue()` and `annularSector()` to shared utils
+- [ ] **T2 (P1)** — `src/main.ts:414` — Guard `bars.length === 0` in worker.onmessage → `showError()`
+- [ ] **T3 (P1)** — `src/main.ts` — Add job ID stamp to `processFile()` to prevent stale decode race
+- [ ] **T4 (P1)** — `src/main.ts:83` — Detect short file (<30s) before Worker postMessage
+- [ ] **T5 (P1)** — `src/main.ts:9` — Extend `stopAnimation()` to stop `AudioBufferSourceNode`
+- [ ] **T6 (P2)** — `src/dsp/validation.test.ts` — Pure helpers + Vitest unit tests
+- [ ] **T7 (P2)** — `src/main.ts` — `let currentFile: File|null`; store in `processFile()`
+- [ ] **T8 (P2)** — `src/renderer.ts` — Implement `exportFingerprint(bars, key, tempo, filename)` — 2048×2260
+- [ ] **T9 (P2)** — `src/main.ts:382` — Update save button to call `exportFingerprint()` instead of display canvas
+- [ ] **T10 (P2)** — `src/main.ts` — Show song name (no extension) in stats DOM line
+- [ ] **T11 (P2)** — `src/main.ts` — Playback tracker: play button, re-decode, overlay canvas, RAF loop, `onended` cleanup
+- [ ] **T12 (P3)** — `src/renderer.ts` — Evaluate per-segment gradient vs existing `ringDepth()` per-ring; implement if visually distinct
+- [ ] **T13 (P3)** — Manual + `TODOS.md` — Color wheel evaluation on 10+ diverse songs; update fifth-apart delta to ~210°
+- [ ] **T14 (P3)** — `TODOS.md` — Add file size/duration policy TODO; rename TODO-3 to "collision smoke test"
+- [ ] **T15 (P3)** — `docs/` + `PHASES.md` — Update stale HANDOFF.md, CURRENT_TASK.md, AI_CONTEXT.md
+
+> **Companion mode gate resolved:** Real-time streaming analysis (TODO-2) is deferred to Phase 5. Phase 4 implements the playback tracker (simple) only. The companion mode architecture spec is now a Phase 5 prerequisite, not Phase 4.
 
 ---
 
@@ -173,11 +195,13 @@ Goal: ship-quality product.
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
 | CEO Review | `/plan-ceo-review` | Scope & strategy | 0 | — | — |
-| Codex Review | `/codex review` | Independent 2nd opinion | 0 | — | — |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (PLAN) | See docs/HANDOFF.md — Phase 2 architecture locked |
+| Codex Review | `/codex review` | Independent 2nd opinion | 1 | CLEAR (PLAN) | 10 findings, all folded via D8/D9/D10 |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 2 | CLEAR (PLAN) | 15 tasks (5 P1, 6 P2, 4 P3), 2 critical gaps resolved |
 | Design Review | `/plan-design-review` | UI/UX gaps | 1 | CLEAR (FULL) | score: 2/10 → 8/10, 11 decisions made |
 | DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | — |
 
-**VERDICT:** DESIGN CLEARED — 11 design decisions locked. Eng Review previously passed (Phase 2 architecture). Phase 3 implementation ready.
+**CODEX:** Stale-decode race (T3), bars=[] silent failure (T2), color wheel spec error (T13) — all folded.
+
+**VERDICT:** ENG + DESIGN CLEARED — Phase 4 architecture locked (10 decisions, D1–D10). 15 implementation tasks ready.
 
 NO UNRESOLVED DECISIONS

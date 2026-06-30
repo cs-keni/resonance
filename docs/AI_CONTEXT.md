@@ -20,14 +20,20 @@ Resonance is a browser-only audio fingerprint engine. Drop in an audio file; get
 ```
 Main thread
   └─ File input → AudioContext.decodeAudioData → Float32Array (Transferable) → Worker
-  └─ Canvas renderer (src/renderer.ts) — Phase 2 ✅
+  └─ currentFile: File stored for re-decode on playback (AudioBuffer is dead after transfer)
+  └─ currentJobId stamp guards stale Worker responses
+  └─ validateAudioDuration() rejects < 30s before Worker postMessage
+  └─ Canvas renderer (src/renderer.ts) — drawFingerprint() + exportFingerprint()
   └─ Analysis sequence animation (requestAnimationFrame) — Phase 3
+  └─ Playback tracker — overlay canvas + AudioBufferSourceNode, radial line via playbackAngle()
+  └─ Export — exportFingerprint() → 2048×2260 offscreen canvas with caption
 
 Web Worker
   └─ Receives { samples: ArrayBuffer, sampleRate, duration } from main thread
   └─ FFT loop (2048-point, Hann window, HOP_SIZE=1024, 50% overlap)
   └─ src/dsp/ modules (fft, chromagram, rms, centroid, onset, bpm, beats, key, barAggregation)
   └─ Posts: { bars: BarData[], key: string, tempo: number, duration: number }
+  └─ bars.length === 0 is an error — guard lives in worker.onmessage
 ```
 
 **Critical invariant:** `OfflineAudioContext` is unavailable in Web Workers (browser limitation). Audio decoding happens on the main thread via `AudioContext.decodeAudioData`. The decoded `Float32Array` is transferred as a Transferable; only bar-level features come back from the Worker. Avoid sending raw PCM back from the Worker — OOM risk on files >5 minutes.
@@ -75,6 +81,14 @@ Radii at 2048×2048 export (cx=cy=1024):
 
 Center: key + BPM text via `fillText` (Geist Mono, 56px bold / 44px, gated on `document.fonts.load()`).
 
+## Shared Helpers (`src/utils.ts`)
+
+- `pitchHue(pc)` — chromatic wheel, `pc × 30°`, wraps within [0, 360)
+- `annularSector(ctx, cx, cy, rIn, rOut, a0, a1)` — arc path for ring segments
+- `validateAudioDuration(duration)` — returns error string if < 30s, null if ok
+- `playbackAngle(currentTime, duration)` — maps playhead position to radians (−π/2 = 12 o'clock)
+- `stripExtension(filename, maxChars)` — strips extension, truncates to maxChars with '…'
+
 ## Key Decisions
 
 - **fft.js over custom FFT** — eliminates silent correctness bugs in all downstream features
@@ -82,6 +96,9 @@ Center: key + BPM text via `fillText` (Geist Mono, 56px bold / 44px, gated on `d
 - **Canvas 2D only** — SVG hybrid dropped due to cross-browser font rendering failures in export
 - **Same-browser determinism only** — lossy codecs (MP3/AAC) decode differently per browser; WAV/FLAC are cross-browser deterministic
 - **STFT chromagram** — CQT would be better below C3 but has no browser-compatible library; revisit Phase 4
+- **Store File reference for playback** — AudioBuffer dies after Transferable transfer; re-decode from `currentFile` on play
+- **Offscreen canvas for export** — display canvas stays 2048×2048; export uses separate 2048×2260 canvas with caption
+- **Chromatic color wheel** — pc×30° (not circle of fifths); songs a perfect fifth apart differ by ~210° not ~30°
 
 ## Known Limitations
 

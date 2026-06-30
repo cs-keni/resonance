@@ -1,29 +1,34 @@
 # Current Task — Resonance
 
-## Active: Phase 3 — Complete ✅ / Phase 4 Planning
+## Active: Phase 4 — Polish and Export (P3 remaining)
 
-**Status:** Phase 3 animation sequence fully implemented. All T1–T11 tasks done. Needs browser testing.
+**Status:** Phase 4 P1 and P2 complete. All new helpers extracted, tested, export wired, playback tracker live. P3 (optional polish) tasks remain.
 
-**Phase 3 tasks — ALL COMPLETE:**
-- [x] T1: Cancellation token — `rafCancel` flag, `stopAnimation()`, wired to `processFile` and `renderDropZone`
-- [x] T2: Waveform draw (0–5s): single stroke, `bar.rms` ±30% height, left-to-right
-- [x] T3: Frequency bands (5–15s): 8 stacked traces, pitch-class groups
-- [x] T4: Chromagram fill (15–30s): 12×N column-by-column, HSL colors, opacity = weight; mobile 12×50 cap
-- [x] T5: Ring 1 assembly (30–45s): clockwise linear draw
-- [x] T6: Rings 2–4 assembly (45–55s) + glyph reveal (55–60s)
-- [x] T7: Stage label below canvas (Geist Mono 0.7rem `#444`, fades at 55s)
-- [x] T8: Inter-phase crossfades (0.3s out + 0.2s in)
-- [x] T9: Wall-clock timer via `performance.now()`
-- [x] T10: Mobile chromagram cap 12×50 on ≤480px
-- [x] T11: Error path (hard cut RAF + show error UI)
+**Phase 4 complete:**
+- [x] T1: `currentFile: File | null` stored for re-decode on play and export filename
+- [x] T2: `currentJobId` stamp guards stale Worker responses on rapid file drops
+- [x] T3: `bars.length === 0` guard in `worker.onmessage` — shows error instead of silent 60s black screen
+- [x] T4: Short file detection (`validateAudioDuration(< 30s)`) on main thread before Worker postMessage
+- [x] T5: `stopAnimation()` extended to also stop `currentAudioSource`
+- [x] T6: DRY extraction to `src/utils.ts` (`pitchHue`, `annularSector`, `validateAudioDuration`, `playbackAngle`, `stripExtension`)
+- [x] T7: `src/utils.test.ts` — 20 Vitest unit tests for pure helpers (54 total)
+- [x] T8: `exportFingerprint()` in `renderer.ts` — 2048×2260 offscreen canvas with song/key/tempo/duration caption
+- [x] T9: Save button downloads `{songname}_resonance.png` via `exportFingerprint()`
+- [x] T10: Song title (extension stripped) shown in stats below fingerprint
+- [x] T11: Playback tracker — "play" button re-decodes from `currentFile`, overlay canvas with white radial line at `playbackAngle(audioCtx.currentTime, duration)`
 
-**Next: browser test Phase 3, then Phase 2 song quality tests**
-- [ ] Drop a real song, watch full 60-second sequence
-- [ ] Verify stage labels update per phase
-- [ ] Verify new drop mid-animation hard-cuts cleanly
-- [ ] Phase 2 deferred: 4-chorus pop, fifth-apart songs, classical vs metal
+**Phase 4 P3 (optional polish):**
+- [ ] T12: Segment radial gradient — evaluate whether per-segment gradient adds visual value vs. existing `ringDepth()` per-ring gradient
+- [ ] T13: Color wheel evaluation on 10+ diverse songs — confirm fifth-apart delta is ~210°, update TODOS.md
+- [ ] T14: Update TODOS.md — add file size/duration policy TODO (D11); rename TODO-3 to "collision smoke test" (D12)
 
-**Phase 2 deferred (do after Phase 3 browser-tested):**
+**Next: browser test Phase 4 golden path**
+- [ ] Drop a real song → watch 60s animation → fingerprint appears with stats
+- [ ] Click "save PNG" → verify 2048×2260 download with caption
+- [ ] Click "play" → verify white radial line sweeps the fingerprint
+- [ ] Drop a second song mid-analysis → verify clean cancellation
+
+**Phase 2 deferred quality tests (still pending):**
 - [ ] Song quality test: 4-chorus pop song → ≥3 visible energy peaks in Ring 3
 - [ ] Two songs a perfect fifth apart → visibly different dominant hues in Ring 1
 - [ ] Classical piano vs. metal → distinguishable at a glance

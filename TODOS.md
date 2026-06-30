@@ -1,6 +1,6 @@
 # Resonance — TODOS
 
-Items deferred from /plan-eng-review (2026-06-27). Each has context and rationale.
+Items deferred from /plan-eng-review. Each has context and rationale.
 
 ---
 
@@ -16,16 +16,16 @@ Items deferred from /plan-eng-review (2026-06-27). Each has context and rational
 
 **Context:** Minimum bar proposed:
 - A 4-chorus pop song must show ≥3 visible energy peaks in Ring 3 (energy ring).
-- Two songs a perfect fifth apart (e.g. C major, G major) must produce visibly different dominant hues in Ring 1 (if the K-S → hue mapping is perceptually correct, these should differ by ≈30° on the color wheel).
+- Two songs a perfect fifth apart (e.g. C major, G major) must produce visibly different dominant hues in Ring 1. With pc×30° (chromatic wheel), 7 semitones = 210° difference — perceptually very distinct colors, not neighbors.
 - A classical piano piece and a metal track must produce fingerprints that a non-musician can distinguish at a glance.
 
 **Depends on:** Phase 2 renderer complete, 10+ songs available for testing.
 
 ---
 
-## TODO-2: Real-time companion mode architecture spec (before Phase 4)
+## TODO-2: Real-time companion mode architecture spec (Phase 5 gate)
 
-**What:** Write a separate architecture document for the real-time companion mode before Phase 4 begins.
+**What:** Write a separate architecture document for the real-time companion mode before Phase 5 begins.
 
 **Why:** Real-time mode has fundamentally different constraints from whole-file analysis:
 - Streaming FFT chunks (can't wait for full file)
@@ -33,17 +33,17 @@ Items deferred from /plan-eng-review (2026-06-27). Each has context and rational
 - Latency target <100ms visual update
 - The beat tracking approach chosen in Phase 1 won't work in real-time
 
-**Pros:** Phase 4 doesn't scope-creep. Real-time mode gets a proper design before any code is written for it.
+**Pros:** Phase 5 doesn't scope-creep. Real-time mode gets a proper design before any code is written for it.
 
-**Cons:** Requires design time that could be spent on Phase 3/4 work.
+**Cons:** Requires design time that could be spent on Phase 4/5 work.
 
-**Context:** The playback tracker (white radial line that moves clockwise as the song plays) is a simpler alternative that may achieve the same UX effect without streaming analysis. Worth considering: does the companion mode add enough value over the playback tracker to justify the architecture difference?
+**Context:** Phase 4 implemented a playback tracker (white radial line that sweeps clockwise as the decoded audio plays). This satisfies the visual companion use-case without streaming analysis. Decision deferred: does real-time streaming mode add enough value over the playback tracker to justify the architecture difference?
 
-**Depends on:** Phase 3 analysis sequence complete; decision needed before Phase 4 starts.
+**Depends on:** Phase 4 complete; decision needed before Phase 5 starts.
 
 ---
 
-## TODO-3: Test uniqueness guarantee on same-genre songs after Phase 2
+## TODO-3: Collision smoke test — verify same-genre songs produce distinct fingerprints
 
 **What:** After Phase 2, systematically test whether 5 same-genre, similar-tempo songs produce visually distinct fingerprints.
 
@@ -58,3 +58,24 @@ Items deferred from /plan-eng-review (2026-06-27). Each has context and rational
 2. Restate uniqueness claim as "perceptual" rather than mathematical — a different song will always look visually *different* to a human, even if two songs look similar.
 
 **Depends on:** Phase 2 renderer complete, 10+ songs available including same-genre pairs.
+
+---
+
+## TODO-4: File size and duration policy
+
+**What:** Define and document what Resonance does with very large files (>100MB, >60 min) and very short files (<30s).
+
+**Why:** Short files are already rejected with a user-friendly error. Long files have no upper bound guard — a 3-hour live recording would run the Worker for several seconds and produce a very dense fingerprint. No OOM guard exists for files >~200MB (the Float32Array for 3hrs × 44100Hz ≈ 475M floats ≈ 1.9GB).
+
+**Pros:** Clear policy prevents silent hang or OOM crash on edge-case inputs. Communicates constraints to users upfront.
+
+**Cons:** Arbitrary cap may reject legitimate long-form content (DJ sets, classical symphonies).
+
+**Context:** Options:
+1. Truncate to first N minutes (simple, silent — bad UX)
+2. Reject with error if >X minutes/MB (explicit, honest)
+3. Subsample frames for very long files (complex, maintains representation)
+
+Recommend option 2 (reject with error) for a first pass. Reasonable threshold: warn at >30 min, reject at >60 min or >200MB.
+
+**Depends on:** Phase 4 complete (export wired); add before public release.

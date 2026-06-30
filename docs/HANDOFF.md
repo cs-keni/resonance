@@ -2,20 +2,20 @@
 
 ## Current State
 
-**Phase:** 2 — Fingerprint Renderer (in progress)
+**Phase:** 4 — Polish and Export (P1 + P2 tasks complete, P3 polish remaining)
 **Branch:** main
 
 ## What Exists
 
 - `SPEC.md` — full architecture + phase breakdown, ENG CLEARED, benchmark populated
-- `TODOS.md` — 3 deferred items (all post-Phase 2)
-- `CONTRAST-MAP.md` — visual differentiation from Chronicle, Flux, Kinotype
-- `PHASES.md` — Phase 1 complete ✅, Phase 2 in progress
+- `TODOS.md` — 3 deferred items (TODO-2 now deferred to Phase 5; TODO-3 renamed)
+- `PHASES.md` — Phase 1–3 complete ✅, Phase 4 in progress (architecture locked)
 - `vite.config.ts` — Vite + Vitest config
-- `src/dsp/` — all 9 DSP modules, fully implemented and unit-tested (34 tests)
+- `src/utils.ts` — shared `pitchHue()`, `annularSector()`, `validateAudioDuration()`, `playbackAngle()`, `stripExtension()`
+- `src/dsp/` — all 9 DSP modules, fully unit-tested (54 tests total)
 - `src/worker.ts` — orchestrates full DSP pipeline; receives decoded Float32Array from main thread
-- `src/main.ts` — drag-and-drop UI, AudioContext decode, calls `drawFingerprint`, save PNG button
-- `src/renderer.ts` — Canvas 2D fingerprint renderer (4 rings + center glyph, 2048×2048 export)
+- `src/main.ts` — drag-and-drop UI, Phase 3 animation, Phase 4 export + playback tracker
+- `src/renderer.ts` — Canvas 2D fingerprint renderer + `exportFingerprint()` (2048×2260 with caption)
 - `docs/` — this scaffold
 
 ## Architecture Ownership
@@ -24,25 +24,30 @@
 |------|--------|
 | DSP pipeline (src/dsp/) | Phase 1 — DONE |
 | Worker (src/worker.ts) | Phase 1 — DONE |
-| Canvas renderer (src/renderer.ts) | Phase 2 — scaffolded, rings implemented |
-| Analysis sequence animations | Phase 3 — not started (run /plan-design-review first) |
-| Export | Phase 4 — not started (canvas.toDataURL wired in Phase 2 main.ts) |
+| Canvas renderer (src/renderer.ts) | Phase 2 — DONE |
+| Analysis sequence animations | Phase 3 — DONE |
+| Export (captioned PNG) | Phase 4 — DONE (`exportFingerprint()`) |
+| Playback tracker | Phase 4 — DONE (overlay canvas, AudioBufferSourceNode) |
+| Segment radial gradient | Phase 4 — P3 (evaluate vs existing `ringDepth()`) |
+| Color wheel tuning | Phase 4 — P3 (manual evaluation, 10+ songs) |
+| Real-time streaming companion | Phase 5 — spec needed before implementation |
 
-## Pending Before Phase 3
+## Phase 4 Decisions (locked)
 
-- Run `/plan-design-review` on the 60-second animation sequence
-- Phase 2 song quality tests pass (10+ songs, energy peaks visible, genres distinguishable)
-
-## Pending Before Phase 4
-
-- Real-time companion mode architecture spec (TODOS.md TODO-2)
+- Export: `exportFingerprint(bars, key, tempo, duration, filename)` → 2048×2260 offscreen canvas
+- Companion mode: playback tracker only (no streaming FFT). Re-decode from stored `currentFile`
+- Short file detection: main thread, `validateAudioDuration()`, before Worker postMessage
+- Stale decode: `currentJobId` stamp in `processFile()` guards stale Worker responses
+- DRY: `pitchHue()` + `annularSector()` extracted to `src/utils.ts`
 
 ## Flags for the Next Agent
 
-- **Audio decode is in main.ts, NOT the Worker.** `OfflineAudioContext` is unavailable in Web Workers. Main thread decodes via `AudioContext.decodeAudioData`, closes the context, transfers the `Float32Array` as a Transferable to the Worker.
-- `barAggregation(bpm=0)` returns `[]` — guard is in place
-- `centroid(silence)` returns `0` — guard is in place
-- Geist Mono must be loaded via `FontFace.load()` before any canvas render (Phase 2)
-- BPM can return the sub-harmonic on pathological signals; rare in practice with real music
-- TS6 requires explicit `Float64Array<ArrayBuffer>` in function return types — unparameterized defaults to `<ArrayBufferLike>` which is not assignable to `<ArrayBuffer>`
-- Worker posts `{ bars, key, tempo, duration }` — types in `src/dsp/barAggregation.ts` (`BarData`)
+- **Audio decode is in main.ts, NOT the Worker.** `OfflineAudioContext` is unavailable in Web Workers.
+- **AudioBuffer is dead after Transferable transfer.** Store `currentFile: File` for re-decode on playback.
+- `bars.length === 0` now shows an error — no silent failure. Guard lives in `worker.onmessage`.
+- `playBtn.onclick` is reassigned to a "stop" handler while playing — reset to `null` on stop.
+- `stopAnimation()` also calls `currentAudioSource?.stop()` — both RAF + audio stop on new drop.
+- `exportFingerprint()` creates an offscreen canvas; the display canvas is NOT used for export.
+- Geist Mono must be loaded via `FontFace.load()` before any canvas text render (already gated in renderer.ts).
+- BPM sub-harmonic possible on synthetic signals; rare with real music.
+- TS6 requires explicit `Float64Array<ArrayBuffer>` in function return types.

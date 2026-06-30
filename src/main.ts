@@ -1,33 +1,26 @@
 import './style.css'
 import type { BarData } from './dsp/barAggregation.ts'
-import { drawFingerprint } from './renderer.ts'
+import { drawFingerprint, exportFingerprint } from './renderer.ts'
+import { pitchHue, annularSector, validateAudioDuration, playbackAngle, stripExtension } from './utils.ts'
 
 const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })
 const app = document.querySelector<HTMLDivElement>('#app')!
 
-// Active animation cancellation handle
+// Active animation + playback cancellation
 let rafCancel: (() => void) | null = null
+let currentAudioSource: AudioBufferSourceNode | null = null
+
+// Stored for re-decode on play and export filename
+let currentFile: File | null = null
+
+// Job ID stamp: guards stale Worker responses when user drops a new file mid-decode
+let currentJobId = 0
 
 function stopAnimation() {
   rafCancel?.()
   rafCancel = null
-}
-
-// Duplicated from renderer.ts to keep animation self-contained
-function pitchHue(pc: number): number {
-  return (pc * 30) % 360
-}
-
-function annularSector(
-  ctx: CanvasRenderingContext2D,
-  cx: number, cy: number,
-  rIn: number, rOut: number,
-  a0: number, a1: number,
-): void {
-  ctx.beginPath()
-  ctx.arc(cx, cy, rOut, a0, a1)
-  ctx.arc(cx, cy, rIn, a1, a0, true)
-  ctx.closePath()
+  try { currentAudioSource?.stop() } catch { /* already stopped */ }
+  currentAudioSource = null
 }
 
 function renderDropZone() {
@@ -57,6 +50,8 @@ function renderDropZone() {
 
 function processFile(file: File) {
   stopAnimation()
+  currentFile = file
+  const jobId = ++currentJobId
 
   const analyzing = document.createElement('div')
   analyzing.className = 'analyzing'
@@ -69,17 +64,29 @@ function processFile(file: File) {
 
   const reader = new FileReader()
   reader.onload = async (e) => {
+    if (jobId !== currentJobId) return  // stale: user dropped a newer file
+
     const compressed = e.target!.result as ArrayBuffer
     let audioBuffer: AudioBuffer
     const ctx = new AudioContext()
     try {
       audioBuffer = await ctx.decodeAudioData(compressed)
-    } catch (err) {
-      showError(`Decode failed: ${String(err)}`)
+    } catch {
+      if (jobId !== currentJobId) return
+      showError('Could not read this file — try a different format (MP3, WAV, FLAC, AAC)')
       return
     } finally {
       ctx.close()
     }
+
+    if (jobId !== currentJobId) return
+
+    const durationError = validateAudioDuration(audioBuffer.duration)
+    if (durationError) {
+      showError(durationError)
+      return
+    }
+
     const samples = audioBuffer.getChannelData(0)
     const payload = {
       samples: samples.buffer as ArrayBuffer,
@@ -373,17 +380,118 @@ function runPhase3(bars: BarData[], key: string, tempo: number, duration: number
       void drawFingerprint(canvas, bars, key, tempo).then(() => {
         label.remove()
 
+        const songTitle = currentFile
+          ? stripExtension(currentFile.name)  // strip extension
+          : ''
+
         const stats = document.createElement('div')
         stats.className  = 'stats'
-        stats.textContent = `${key} / ${tempo} bpm / ${Math.round(duration)}s / ${bars.length} bars`
+        stats.textContent = [
+          songTitle,
+          `${key} / ${tempo} bpm / ${Math.round(duration)}s / ${bars.length} bars`,
+        ].filter(Boolean).join(' · ')
+
+        const filename = currentFile
+          ? stripExtension(currentFile.name)
+          : 'resonance'
 
         const dlBtn = document.createElement('button')
         dlBtn.textContent = 'save png'
-        dlBtn.addEventListener('click', () => {
-          const a = document.createElement('a')
-          a.href      = canvas.toDataURL('image/png')
-          a.download  = 'resonance.png'
-          a.click()
+        dlBtn.addEventListener('click', async () => {
+          dlBtn.textContent = 'saving…'
+          dlBtn.disabled = true
+          try {
+            const dataUrl = await exportFingerprint(bars, key, tempo, duration, filename)
+            const a = document.createElement('a')
+            a.href     = dataUrl
+            a.download = `${filename}_resonance.png`
+            a.click()
+          } finally {
+            dlBtn.textContent = 'save png'
+            dlBtn.disabled = false
+          }
+        })
+
+        const playBtn = document.createElement('button')
+        playBtn.textContent = 'play'
+        playBtn.addEventListener('click', async () => {
+          if (!currentFile || currentAudioSource) return  // playing or no file
+
+          const fileToPlay = currentFile
+          playBtn.textContent = 'loading…'
+          playBtn.disabled = true
+
+          let audioBuffer: AudioBuffer
+          const audioCtx = new AudioContext()
+          try {
+            const compressed = await fileToPlay.arrayBuffer()
+            audioBuffer = await audioCtx.decodeAudioData(compressed)
+          } catch {
+            audioCtx.close()
+            playBtn.textContent = 'play'
+            playBtn.disabled = false
+            return
+          }
+
+          // Overlay canvas for the radial progress line
+          const overlay = document.createElement('canvas')
+          overlay.width  = 2048
+          overlay.height = 2048
+          overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none'
+          container.style.position = 'relative'
+          container.insertBefore(overlay, canvas.nextSibling)
+          const ovCtx = overlay.getContext('2d')!
+
+          const R_LINE = 870  // R4_OUT — line extends to outer ring
+          const CX = 1024, CY = 1024
+
+          let overlayCancel = false
+          const overlayRafCancel = () => { overlayCancel = true; overlay.remove() }
+
+          rafCancel = () => {
+            cancelled = true
+            cancelAnimationFrame(rafId)
+            overlayRafCancel()
+          }
+
+          function drawOverlay() {
+            if (overlayCancel) return
+            const angle = playbackAngle(audioCtx.currentTime, duration)
+            ovCtx.clearRect(0, 0, 2048, 2048)
+            ovCtx.save()
+            ovCtx.strokeStyle = 'rgba(255,255,255,0.85)'
+            ovCtx.lineWidth = 2
+            ovCtx.beginPath()
+            ovCtx.moveTo(CX, CY)
+            ovCtx.lineTo(CX + Math.cos(angle) * R_LINE, CY + Math.sin(angle) * R_LINE)
+            ovCtx.stroke()
+            ovCtx.restore()
+            if (audioCtx.currentTime < duration) requestAnimationFrame(drawOverlay)
+          }
+
+          const source = audioCtx.createBufferSource()
+          source.buffer = audioBuffer
+          source.connect(audioCtx.destination)
+          source.onended = () => {
+            overlayRafCancel()
+            playBtn.textContent = 'play'
+            playBtn.disabled = false
+            currentAudioSource = null
+            audioCtx.close()
+          }
+          source.start()
+          currentAudioSource = source
+
+          playBtn.textContent = '■ stop'
+          playBtn.disabled = false
+          playBtn.onclick = () => {
+            stopAnimation()
+            playBtn.textContent = 'play'
+            playBtn.disabled = false
+            playBtn.onclick = null  // reset to outer handler
+          }
+
+          requestAnimationFrame(drawOverlay)
         })
 
         const retryBtn = document.createElement('button')
@@ -393,6 +501,7 @@ function runPhase3(bars: BarData[], key: string, tempo: number, duration: number
         const actions = document.createElement('div')
         actions.className = 'actions'
         actions.appendChild(dlBtn)
+        actions.appendChild(playBtn)
         actions.appendChild(retryBtn)
 
         container.appendChild(stats)
@@ -422,6 +531,11 @@ worker.onmessage = (e: MessageEvent) => {
 
   if (error) {
     showError(error)
+    return
+  }
+
+  if (bars.length === 0) {
+    showError('Could not detect musical structure — try a track with a clear beat and pitch content')
     return
   }
 

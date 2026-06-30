@@ -2,6 +2,27 @@
 
 ## 2026-06-29
 
+### Phase 4 — Core architecture + P1 fixes (`src/utils.ts`, `src/main.ts`, `src/renderer.ts`)
+
+Phase 4 architecture locked via /plan-eng-review (10 decisions, D1–D10). All P1 tasks and most P2 tasks complete.
+
+**New files:**
+- `src/utils.ts` — shared `pitchHue()`, `annularSector()`, `validateAudioDuration()`, `playbackAngle()`, `stripExtension()`
+- `src/utils.test.ts` — 20 Vitest unit tests for pure helpers
+
+**Key changes:**
+- `stopAnimation()` now also stops `currentAudioSource` (AudioBufferSourceNode) — playback and overlay RAF stop on new file drop
+- `currentJobId` stamp in `processFile()` guards stale Worker responses when a second file is dropped mid-decode
+- `bars.length === 0` guard in `worker.onmessage` prevents 60s black-screen silent failure
+- Short file detection (< 30s) in main thread before Worker postMessage — user-friendly error message
+- `currentFile: File | null` stored module-level for re-decode on play and export filename
+- `exportFingerprint()` in `renderer.ts` — 2048×2260 offscreen canvas; draws fingerprint, then adds song name/key/tempo/duration caption in the 212px margin below
+- Save button now calls `exportFingerprint()` and downloads `{songname}_resonance.png`
+- Song name (extension stripped) added to stats DOM line below fingerprint
+- Playback tracker: "play" button → re-decode from `currentFile` → AudioBufferSourceNode + overlay canvas → white radial line tracks `playbackAngle(audioCtx.currentTime, duration)`
+
+**Test count:** 34 → 54 (20 new utils tests).
+
 ### Phase 3 — Animation sequence implemented (`src/main.ts`, `src/style.css`)
 
 Full 60-second animated build sequence implemented. All 11 tasks complete.
