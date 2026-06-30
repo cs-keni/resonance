@@ -196,13 +196,27 @@ function runPhase3(bars: BarData[], key: string, tempo: number, duration: number
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
     }
     ctx.stroke()
+
+    // Glowing dot at the draw head
+    if (drawUpTo > 0 && drawUpTo < n) {
+      const tipX = (drawUpTo - 1) * xScale
+      const tipY = CY - bars[drawUpTo - 1]!.rms * SIZE * 0.3
+      const grad = ctx.createRadialGradient(tipX, tipY, 0, tipX, tipY, 20)
+      grad.addColorStop(0,   'rgba(255,255,255,0.7)')
+      grad.addColorStop(0.3, 'rgba(255,255,255,0.15)')
+      grad.addColorStop(1,   'rgba(255,255,255,0)')
+      ctx.fillStyle = grad
+      ctx.fillRect(tipX - 20, tipY - 20, 40, 40)
+    }
   }
 
-  // Phase 1 (5–15s): stacked thin amplitude traces per frequency band
+  // Phase 1 (5–15s): stacked thin amplitude traces scan left-to-right over 10s
   function drawBands(elapsed: number) {
     clearBg()
     const NUM_BANDS = 8
-    const fadeIn    = Math.min((elapsed - T[1]!) / 1000, 1)  // bands fade in over 1s
+    const phaseT    = Math.min((elapsed - T[1]!) / (T[2]! - T[1]!), 1)
+    const colsToShow = Math.floor(phaseT * n)
+    const fadeIn    = Math.min((elapsed - T[1]!) / 500, 1)  // 0.5s opacity fade-in
     const xScale    = SIZE / n
     const bandH     = SIZE / (NUM_BANDS + 2)
     const yAmp      = bandH * 0.45
@@ -210,14 +224,13 @@ function runPhase3(bars: BarData[], key: string, tempo: number, duration: number
     for (let b = 0; b < NUM_BANDS; b++) {
       const pcStart = Math.floor(b * 12 / NUM_BANDS)
       const pcEnd   = Math.ceil((b + 1) * 12 / NUM_BANDS)
-      // Lower bands slightly brighter (more prominent bass foundation)
       const baseOpacity = 0.25 + (NUM_BANDS - 1 - b) / NUM_BANDS * 0.2
       ctx.beginPath()
       ctx.strokeStyle = `rgba(222,222,222,${baseOpacity * fadeIn})`
       ctx.lineWidth = 1
       const yBase = bandH * (b + 1.5)
 
-      for (let i = 0; i < n; i++) {
+      for (let i = 0; i < colsToShow; i++) {
         let energy = 0
         const mc = maxChroma[i]!
         for (let pc = pcStart; pc < pcEnd; pc++) energy += bars[i]!.pitchClassProfile[pc]! / mc
@@ -227,6 +240,16 @@ function runPhase3(bars: BarData[], key: string, tempo: number, duration: number
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
       }
       ctx.stroke()
+    }
+
+    // Glowing scan-head: bright vertical smear at the leading edge
+    if (colsToShow > 0 && colsToShow < n) {
+      const tipX = colsToShow * xScale
+      const grad = ctx.createLinearGradient(tipX - 12, 0, tipX + 4, 0)
+      grad.addColorStop(0, 'rgba(255,255,255,0)')
+      grad.addColorStop(1, 'rgba(255,255,255,0.06)')
+      ctx.fillStyle = grad
+      ctx.fillRect(tipX - 12, 0, 16, SIZE)
     }
   }
 
@@ -253,12 +276,30 @@ function runPhase3(bars: BarData[], key: string, tempo: number, duration: number
     }
   }
 
+  // Smoothstep easing: starts fast, slows to a stop — more organic than linear
+  function smoothstep(t: number): number { return t * t * (3 - 2 * t) }
+
+  // Draw a white shimmer arc at the leading edge of ring assembly
+  function drawRingTip(rIn: number, rOut: number, tipSeg: number, total: number) {
+    if (tipSeg <= 0 || tipSeg >= total) return
+    const TIP = Math.min(5, tipSeg)
+    ctx.save()
+    for (let i = tipSeg - TIP; i < tipSeg; i++) {
+      const fade = (i - (tipSeg - TIP)) / TIP
+      annularSector(ctx, CX, CY, rIn, rOut,
+        startAngle + i * dTheta + GAP, startAngle + (i + 1) * dTheta - GAP)
+      ctx.fillStyle = `rgba(255,255,255,${fade * 0.28})`
+      ctx.fill()
+    }
+    ctx.restore()
+  }
+
   // Phases 3–5 (30–60s): ring assembly, used for all three phases
   function drawRings(elapsed: number) {
     clearBg()
 
-    // Ring 1 — phase 3 (30–45s), clockwise linear draw
-    const r1p    = Math.min((elapsed - T[3]!) / (T[4]! - T[3]!), 1)
+    // Ring 1 — phase 3 (30–45s), eased clockwise draw
+    const r1p    = smoothstep(Math.min((elapsed - T[3]!) / (T[4]! - T[3]!), 1))
     const r1Segs = Math.floor(r1p * n)
     for (let i = 0; i < r1Segs; i++) {
       annularSector(ctx, CX, CY, R1_IN, R1_OUT,
@@ -266,6 +307,7 @@ function runPhase3(bars: BarData[], key: string, tempo: number, duration: number
       ctx.fillStyle = `hsl(${pitchHue(bars[i]!.pitchClass)},78%,54%)`
       ctx.fill()
     }
+    drawRingTip(R1_IN, R1_OUT, r1Segs, n)
 
     if (elapsed < T[4]!) return  // still in Ring 1 phase — done
 
@@ -277,8 +319,8 @@ function runPhase3(bars: BarData[], key: string, tempo: number, duration: number
       ctx.fill()
     }
 
-    // Rings 2–4 — phase 4 (45–55s), all three draw simultaneously
-    const r24p    = Math.min((elapsed - T[4]!) / (T[5]! - T[4]!), 1)
+    // Rings 2–4 — phase 4 (45–55s), all three draw simultaneously, eased
+    const r24p    = smoothstep(Math.min((elapsed - T[4]!) / (T[5]! - T[4]!), 1))
     const r24Segs = Math.floor(r24p * n)
     for (let i = 0; i < r24Segs; i++) {
       const bar = bars[i]!
@@ -298,6 +340,7 @@ function runPhase3(bars: BarData[], key: string, tempo: number, duration: number
       ctx.fillStyle = `hsl(${pitchHue(bar.pitchClass)},90%,${Math.round(20 + normC(bar.spectralCentroid) * 65)}%)`
       ctx.fill()
     }
+    drawRingTip(R4_IN, R4_OUT, r24Segs, n)
   }
 
   // Phase 5 overlay: center fades to reveal key+BPM glyph
@@ -384,8 +427,11 @@ function runPhase3(bars: BarData[], key: string, tempo: number, duration: number
           ? stripExtension(currentFile.name)  // strip extension
           : ''
 
+        canvas.classList.add('idle')
+
         const stats = document.createElement('div')
-        stats.className  = 'stats'
+        stats.className  = 'stats fade-up'
+        stats.style.setProperty('--delay', '60ms')
         stats.textContent = [
           songTitle,
           `${key} / ${tempo} bpm / ${Math.round(duration)}s / ${bars.length} bars`,
@@ -499,7 +545,8 @@ function runPhase3(bars: BarData[], key: string, tempo: number, duration: number
         retryBtn.addEventListener('click', renderDropZone)
 
         const actions = document.createElement('div')
-        actions.className = 'actions'
+        actions.className = 'actions fade-up'
+        actions.style.setProperty('--delay', '180ms')
         actions.appendChild(dlBtn)
         actions.appendChild(playBtn)
         actions.appendChild(retryBtn)

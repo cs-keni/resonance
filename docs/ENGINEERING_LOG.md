@@ -1,5 +1,27 @@
 # Engineering Log — Resonance
 
+## 2026-06-30
+
+### Animation pass — 60s build, idle life, micro-interactions (`src/main.ts`, `src/style.css`)
+
+**During the 60s build:**
+- Waveform (0–5s): radial glow dot at draw head (scanner aesthetic)
+- Bands (5–15s): now scan left-to-right over 10s instead of rendering statically; soft vertical shimmer at leading edge
+- Ring assembly (30–55s): smoothstep easing replaces linear (starts fast, decelerates to stop); white shimmer arc at leading edge of each ring
+
+**Post-analysis:**
+- Fingerprint canvas gets `.idle` class after `drawFingerprint()` resolves → `breathe` keyframe (scale 1→1.007, 7s loop)
+- Stats + actions use `.fade-up` with staggered delays (60ms / 180ms) instead of instant pop-in
+
+**Micro-interactions:**
+- Buttons: `translateY(-2px)` on hover, `scale(0.96)` on active
+- Drop zone: `scale(1.03)` on drag-over, `zone-in` entrance animation on mount
+- `.analyzing` state gets `zone-in` entrance
+
+**Commit:** see git log.
+
+---
+
 ## 2026-06-29
 
 ### Phase 4 — Core architecture + P1 fixes (`src/utils.ts`, `src/main.ts`, `src/renderer.ts`)
