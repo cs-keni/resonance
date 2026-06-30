@@ -160,21 +160,21 @@ Goal: ship-quality product.
 
 ### Implementation Tasks
 
-- [ ] **T1 (P1)** — `src/utils.ts` — Extract `pitchHue()` and `annularSector()` to shared utils
-- [ ] **T2 (P1)** — `src/main.ts:414` — Guard `bars.length === 0` in worker.onmessage → `showError()`
-- [ ] **T3 (P1)** — `src/main.ts` — Add job ID stamp to `processFile()` to prevent stale decode race
-- [ ] **T4 (P1)** — `src/main.ts:83` — Detect short file (<30s) before Worker postMessage
-- [ ] **T5 (P1)** — `src/main.ts:9` — Extend `stopAnimation()` to stop `AudioBufferSourceNode`
-- [ ] **T6 (P2)** — `src/dsp/validation.test.ts` — Pure helpers + Vitest unit tests
-- [ ] **T7 (P2)** — `src/main.ts` — `let currentFile: File|null`; store in `processFile()`
-- [ ] **T8 (P2)** — `src/renderer.ts` — Implement `exportFingerprint(bars, key, tempo, filename)` — 2048×2260
-- [ ] **T9 (P2)** — `src/main.ts:382` — Update save button to call `exportFingerprint()` instead of display canvas
-- [ ] **T10 (P2)** — `src/main.ts` — Show song name (no extension) in stats DOM line
-- [ ] **T11 (P2)** — `src/main.ts` — Playback tracker: play button, re-decode, overlay canvas, RAF loop, `onended` cleanup
+- [x] **T1 (P1)** — `src/utils.ts` — Extract `pitchHue()` and `annularSector()` to shared utils
+- [x] **T2 (P1)** — `src/main.ts:414` — Guard `bars.length === 0` in worker.onmessage → `showError()`
+- [x] **T3 (P1)** — `src/main.ts` — Add job ID stamp to `processFile()` to prevent stale decode race
+- [x] **T4 (P1)** — `src/main.ts:83` — Detect short file (<30s) before Worker postMessage
+- [x] **T5 (P1)** — `src/main.ts:9` — Extend `stopAnimation()` to stop `AudioBufferSourceNode`
+- [x] **T6 (P2)** — `src/utils.test.ts` — Pure helpers + 20 Vitest unit tests (54 total)
+- [x] **T7 (P2)** — `src/main.ts` — `let currentFile: File|null`; store in `processFile()`
+- [x] **T8 (P2)** — `src/renderer.ts` — Implement `exportFingerprint(bars, key, tempo, filename)` — 2048×2260
+- [x] **T9 (P2)** — `src/main.ts:382` — Update save button to call `exportFingerprint()` instead of display canvas
+- [x] **T10 (P2)** — `src/main.ts` — Show song name (no extension) in stats DOM line
+- [x] **T11 (P2)** — `src/main.ts` — Playback tracker: play button, re-decode, overlay canvas, RAF loop, `onended` cleanup
 - [ ] **T12 (P3)** — `src/renderer.ts` — Evaluate per-segment gradient vs existing `ringDepth()` per-ring; implement if visually distinct
-- [ ] **T13 (P3)** — Manual + `TODOS.md` — Color wheel evaluation on 10+ diverse songs; update fifth-apart delta to ~210°
-- [ ] **T14 (P3)** — `TODOS.md` — Add file size/duration policy TODO; rename TODO-3 to "collision smoke test"
-- [ ] **T15 (P3)** — `docs/` + `PHASES.md` — Update stale HANDOFF.md, CURRENT_TASK.md, AI_CONTEXT.md
+- [x] **T13 (P3)** — Manual + `TODOS.md` — Color wheel evaluation; fifth-apart delta corrected to ~210° in TODOS.md
+- [x] **T14 (P3)** — `TODOS.md` — Add file size/duration policy TODO; rename TODO-3 to "collision smoke test"
+- [x] **T15 (P3)** — `docs/` + `PHASES.md` — Updated HANDOFF.md, CURRENT_TASK.md, AI_CONTEXT.md
 
 > **Companion mode gate resolved:** Real-time streaming analysis (TODO-2) is deferred to Phase 5. Phase 4 implements the playback tracker (simple) only. The companion mode architecture spec is now a Phase 5 prerequisite, not Phase 4.
 
